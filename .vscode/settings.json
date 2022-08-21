@@ -8,6 +8,7 @@
         "param.h": "c",
         "unistd.h": "c",
         "unistd_x32.h": "c",
-        "user.h": "c"
+        "user.h": "c",
+        "fs.h": "c"
     }
 }
