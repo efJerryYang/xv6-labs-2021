@@ -16,8 +16,7 @@ int main(int argc, char *argv[])
         close(ping[1]);
         close(pong[0]);
 
-        while (read(ping[0], byte, 1) < 1)
-            ;
+        read(ping[0], byte, 1);
         printf("%d: received ping\n", getpid());
         write(pong[1], " ", 1);
 
@@ -31,8 +30,7 @@ int main(int argc, char *argv[])
         close(pong[1]);
 
         write(ping[1], " ", 1);
-        while (read(pong[0], byte, 1) < 1)
-            ;
+        read(pong[0], byte, 1);
         printf("%d: received pong\n", getpid());
 
         close(ping[1]);
