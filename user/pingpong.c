@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
         close(ping[1]);
         close(pong[0]);
 
-        read(ping[0], byte, 1);
+        read(ping[0], byte, 1); // the process will be automatically blocked untill the date is transfered to the receiver
         printf("%d: received ping\n", getpid());
         write(pong[1], " ", 1);
 
