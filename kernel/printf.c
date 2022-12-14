@@ -132,3 +132,23 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void backtrace(void) {
+  uint64 fp = r_fp();
+  uint64 sp = r_sp();
+  // walk up the stack and print the saved return addresses
+  // printf("fp %p sp %p\n", fp, sp);
+  // printf("backtrace: sp %p fp %p phystop %p fp - phystop %p", sp, fp, PHYSTOP, fp - PHYSTOP);
+  printf("backtrace:\n");
+  // printf("fp %p sp %p\n", fp, sp);
+  // printf("PGROUNDUP(fp) %p\n", PGROUNDUP(fp));
+  // printf("PGROUNDUP(sp) %p\n", PGROUNDUP(sp));
+  // printf("PGROUNDDOWN(fp) %p\n", PGROUNDDOWN(fp));
+  // printf("PGROUNDDOWN(sp) %p\n", PGROUNDDOWN(sp));
+  while(PGROUNDDOWN(sp) < fp && fp < PGROUNDUP(sp)) {
+    uint64 ra = *(uint64*)(fp - 8);
+    printf("%p\n", ra);
+    fp = *(uint64*)(fp - 16);
+  }
+  // printf("fp %p sp %p\n", fp, sp);
+}

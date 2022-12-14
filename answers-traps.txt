@@ -1,0 +1,7 @@
+1. a0-a7, a2
+2. `  26:	45b1                	li	a1,12`, g is also contained in this instruction, because the result of f(8)+1 is computed directly, so that both the call for f and g is ignored for optimizing purpose
+3. 0x0000000000000628 <printf>
+4. 1528(ra) = 0x628 = 1576, so the ra = 1576 - 1528 = 48
+5. "He110 World", 72 6c 64 stands for r l d, and hex(57616) = 0xe110
+6. It depends on how the compiler handle the undefined condition. It might be the value of a2 which is not used but may contain value, so that the result may be arbitrary. Or the compiler may just ignore the unspecified value here, so there may be no value displayed here.
+
