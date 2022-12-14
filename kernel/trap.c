@@ -16,6 +16,13 @@ void kernelvec();
 
 extern int devintr();
 
+// Define a function table to call the periodic function indirectly.
+// extern void periodic(void);
+
+// void (*func_table[])(void) = {
+//   [0] periodic,
+// };
+
 void
 trapinit(void)
 {
@@ -77,8 +84,25 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) { 
+    p->ticks_count++;
+    // printf("ticks_count = %d\n", p->ticks_count);
+    if (p->ticks_count >= p->alarm_interval && p->alarm_interval != 0) {
+      p->ticks_count = 0;
+      // printf("alarm interval expired\n");
+      // problem is caused by executing the handler with address 0 (sepc=0x0000000000000000)
+      if (p->handler != 0){
+        ((void (*)()) p->handler)();
+      } else {
+        // printf("alarm!\n");
+        //  ((void (*)()) p->handler)();
+        // call a function at address zero using asm
+        // asm("jalr zero, 0(zero)");
+        // asm volatile("jalr x0");
+      }
+    }
     yield();
+  }
 
   usertrapret();
 }

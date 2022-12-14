@@ -96,3 +96,22 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64 sys_sigalarm(void) {
+  struct proc *p = myproc();
+  int n;
+  uint64 addr;
+  if(argint(0, &n) < 0)
+    return -1;
+  if(argaddr(1, &addr) < 0)
+    return -1;
+  p->alarm_interval = n;
+  // printf("alarm_interval: %d\n", p->alarm_interval);
+  p->handler = (void *) addr; // syntax of casting a function pointer is like (void (*)()) ptr
+  // printf("handler: %p\n", p->handler);
+  return 0;
+}
+uint64 sys_sigreturn(void)
+{
+  return 0;
+}
