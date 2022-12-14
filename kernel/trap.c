@@ -99,6 +99,7 @@ usertrap(void)
         // call a function at address zero using asm
         // asm("jalr zero, 0(zero)");
         // asm volatile("jalr x0");
+        p->trapframe->epc = (uint64) p->handler;
       }
     }
     yield();
