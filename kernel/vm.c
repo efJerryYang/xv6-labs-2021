@@ -15,6 +15,8 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+extern int page_reference_count[]; // array size is PHYSTOP/PGSIZE
+
 // Make a direct-map page table for the kernel.
 pagetable_t
 kvmmake(void)
@@ -303,23 +305,37 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  // char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
+    // The reason we use walk here is to validate the PTE flags.
+    // So that we can make sure the PTE is valid and needs to be copied.
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
+    flags = (PTE_FLAGS(*pte) & (~PTE_W)) | PTE_COW;
+    // if((mem = kalloc()) == 0)
+    //   goto err;
+    // memmove(mem, (char*)pa, PGSIZE);
+    *pte = PA2PTE(pa) | flags;
+    if(mappages(new, i, PGSIZE, pa, flags) != 0)
       goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
-      goto err;
-    }
-  }
+    // increase the page reference count
+    page_reference_count[PGREF_CNT(pa)]++;
+    //   kfree(mem);
+    //   goto err;
+    // }
+  } // examine the old pagetable
+  // for (i = 0; i< 512; i++) {
+  //   pte_t *pte = &old[i]; // get pointer to old page table entry
+  //   *pte = *pte & ~PTE_W; // clear write bit
+  //   *pte = *pte | PTE_COW; // set COW bit
+  //   new[i] = *pte;        // copy page table entry directly
+  //   // increase the page reference count
+  //   page_reference_count[PTE2PA(*pte) / PGSIZE]++;
+  // }
   return 0;
 
  err:
@@ -347,15 +363,39 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
+  pte_t * pte;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
+    pte = walk(pagetable, va0, 0);
+    pa0 = PTE2PA(*pte);
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
+    if (*pte & PTE_COW) {
+      // if the page is COW, we need to copy the page first
+      // before we can write to it
+      uint flags = PTE_FLAGS(*pte);
+      char *page;
+      if((page = kalloc()) == 0)
+        panic("copyout(): out of memory");
+      memmove(page, (char*)pa0, PGSIZE);
+      *pte = PA2PTE((uint64)page) | (flags & ~PTE_COW) | PTE_W;
+      // mappages(pagetable, va0, PGSIZE, (uint64)page, PTE_W | (~PTE_COW & PTE_FLAGS(*pte)));
+        // kfree(page);
+        // return -1;
+      // }
+      // decrease the page reference count
+      // if (page_reference_count[PGREF_CNT(pa0)] <= 1) {
+      //   page_reference_count[PGREF_CNT(pa0)] = 0;
+        kfree((void*)pa0);
+        pa0 = (uint64) page;
+      // } else {
+      //   page_reference_count[PGREF_CNT(pa0)]--;
+      // }
+    }
     memmove((void *)(pa0 + (dstva - va0)), src, n);
 
     len -= n;
