@@ -17,6 +17,8 @@ extern char trampoline[]; // trampoline.S
 
 extern int page_reference_count[]; // array size is PHYSTOP/PGSIZE
 
+extern char end[]; // first address after kernel.
+                   // defined by kernel.ld.
 // Make a direct-map page table for the kernel.
 pagetable_t
 kvmmake(void)
@@ -321,6 +323,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     // memmove(mem, (char*)pa, PGSIZE);
     *pte = PA2PTE(pa) | flags;
     if(mappages(new, i, PGSIZE, pa, flags) != 0)
+      goto err;
+    if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
       goto err;
     // increase the page reference count
     page_reference_count[PGREF_CNT(pa)]++;
