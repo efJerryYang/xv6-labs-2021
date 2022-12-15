@@ -91,14 +91,17 @@ usertrap(void)
       p->ticks_count = 0;
       // printf("alarm interval expired\n");
       // problem is caused by executing the handler with address 0 (sepc=0x0000000000000000)
-      if (p->handler != 0){
-        ((void (*)()) p->handler)();
-      } else {
+      // if (p->handler != 0){
+      //   p->in_a_handler = 1;
+      //   ((void (*)()) p->handler)();
+      // } else {
         // printf("alarm!\n");
         //  ((void (*)()) p->handler)();
         // call a function at address zero using asm
         // asm("jalr zero, 0(zero)");
         // asm volatile("jalr x0");
+      if (!p->in_a_handler) {
+        p->in_a_handler = 1;
         p->old_trapframe = (struct trapframe *)kalloc();
         memmove(p->old_trapframe, p->trapframe, sizeof(struct trapframe));
         p->old_alarm_interval = p->alarm_interval;

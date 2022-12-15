@@ -111,6 +111,7 @@ struct proc {
   int handling_signal;         // flag to indicate if the process is handling a signal
   int handler_not_null;        // flat to indicate if the handler is at address 0 / it is null
 
+  int in_a_handler;            // flag to indicate if the process is in a handler
   void (*old_handler)();       // function pointer to signal handler (before handling a signal
   int old_alarm_interval;      // alarm interval before handling a signal
   int old_ticks_count;         // ticks count before handling a signal

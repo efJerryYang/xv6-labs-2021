@@ -105,7 +105,7 @@ uint64 sys_sigalarm(void) {
     return -1;
   if(argaddr(1, &addr) < 0)
     return -1;
-  if(p->handling_signal == 1)
+  if(p->handling_signal == 1 || p->in_a_handler == 1)
     return -1;
   p->alarm_interval = n;
   // printf("alarm_interval: %d\n", p->alarm_interval);
@@ -126,7 +126,7 @@ uint64 sys_sigreturn(void)
   p->handling_signal = 0;
   p->alarm_interval = 0;
   p->handler = 0;
-  if (p->handler_not_null == 0) {
+  // if (p->handler_not_null == 0) {
     // means that the handler was null
     // so we need to restore the old trapframe
     memmove(p->trapframe, p->old_trapframe, sizeof(struct trapframe));
@@ -136,7 +136,8 @@ uint64 sys_sigreturn(void)
     p->handler_not_null = p->old_handler_not_null;
     p->handler = p->old_handler;
     p->handling_signal = p->old_handling_signal;
-  }
+  // }
+  p->in_a_handler = 0;
   return 0;
   
 }
