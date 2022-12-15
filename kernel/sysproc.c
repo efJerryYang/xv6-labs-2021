@@ -105,13 +105,38 @@ uint64 sys_sigalarm(void) {
     return -1;
   if(argaddr(1, &addr) < 0)
     return -1;
+  if(p->handling_signal == 1)
+    return -1;
   p->alarm_interval = n;
   // printf("alarm_interval: %d\n", p->alarm_interval);
   p->handler = (void *) addr; // syntax of casting a function pointer is like (void (*)()) ptr
+  p->handling_signal = 1;
+  if (addr == 0)
+    p->handler_not_null = 0;
+  else 
+    p->handler_not_null = 1;
   // printf("handler: %p\n", p->handler);
   return 0;
 }
 uint64 sys_sigreturn(void)
 {
+  struct proc *p = myproc();
+  if(p->handling_signal == 0)
+    return -1;
+  p->handling_signal = 0;
+  p->alarm_interval = 0;
+  p->handler = 0;
+  if (p->handler_not_null == 0) {
+    // means that the handler was null
+    // so we need to restore the old trapframe
+    memmove(p->trapframe, p->old_trapframe, sizeof(struct trapframe));
+    kfree(p->old_trapframe);
+    p->old_trapframe = 0;
+    p->alarm_interval = p->old_alarm_interval;
+    p->handler_not_null = p->old_handler_not_null;
+    p->handler = p->old_handler;
+    p->handling_signal = p->old_handling_signal;
+  }
   return 0;
+  
 }

@@ -108,4 +108,13 @@ struct proc {
   void (*handler)();           // function pointer to signal handler
   int alarm_interval;          // alarm interval in ticks
   int ticks_count;             // ticks count since last alarm
+  int handling_signal;         // flag to indicate if the process is handling a signal
+  int handler_not_null;        // flat to indicate if the handler is at address 0 / it is null
+
+  void (*old_handler)();       // function pointer to signal handler (before handling a signal
+  int old_alarm_interval;      // alarm interval before handling a signal
+  int old_ticks_count;         // ticks count before handling a signal
+  int old_handling_signal;     // flag to indicate if the process was handling a signal before handling the current signal
+  int old_handler_not_null;    // flag to indicate if the handler was null before handling the current signal
+  struct trapframe *old_trapframe; // trapframe before handling a signal
 };

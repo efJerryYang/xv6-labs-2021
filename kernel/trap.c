@@ -99,6 +99,13 @@ usertrap(void)
         // call a function at address zero using asm
         // asm("jalr zero, 0(zero)");
         // asm volatile("jalr x0");
+        p->old_trapframe = (struct trapframe *)kalloc();
+        memmove(p->old_trapframe, p->trapframe, sizeof(struct trapframe));
+        p->old_alarm_interval = p->alarm_interval;
+        p->old_ticks_count = p->ticks_count;
+        p->old_handling_signal = p->handling_signal;
+        p->old_handler_not_null = p->handler_not_null;
+        p->old_handler = p->handler;
         p->trapframe->epc = (uint64) p->handler;
       }
     }
