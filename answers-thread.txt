@@ -1,0 +1,28 @@
+If there are multiple threads executing the program, race conditions may occur.
+
+That's because there is no locks for the hash table to be held when threads are visiting at the same time.
+
+When multiple threads try to access and modify shared data simultaneously, conflicting updates and unpredictable behavior may happen. (insert & update entries at the same time)
+
+For example, if thread 0 and thread 1 both try to add a key-value pair to bucket 0. When executing the program, it is hard to say what was happenning during the insert process, which would probably cause the linked entry list lost many of the entries on the list.
+
+Let's say, the hash table originally has the structure below:
+
+index  entry pointer   entries
+  0    [     ----]----> [(k1, v1), ----]----> [(k2, v2), ----]----> NULL
+  1    [     ----]----> NULL
+ ...
+
+Now, t0 try to insert a key-value pair (k3, v3) into bucket 0, while t1 also want to insert a key-value pair (k4, v4) into bucket 0. Assuming that t0 first enter the `insert` function, executing to the line `e->next = n;` just before the entry pointer being updated to link to the newly inserted entry struct. Then t0 swtich to t1, also executing into the `insert` function, but successfully updated the entry pointer to point to the entry with key pair (k4, v4).
+
+Now, the structure of the first bucket would look like this:
+
+  0    [     ----]----> [(k4, v4), ----]----> [(k2, v2), ----]----> NULL
+                                              ^
+					      |
+					      |
+			[(k3, v3), ----]------+
+
+Then, when the thread switch from t1 back to t0, to continue executing the code `*p = e`, which would cause the entry `[(k4, v4), ----]---->` lost. And this is the causes of missing keys in this program.
+
+Solutions to it can vary according to different scheme applied to this situation, but according to the given lock and unlock statements, we can easily add a lock to each bucket to avoid such race conditions. In this way, multiple thread can work concurrently on multiple bucket while not casusing the issuse of missing entries.
