@@ -45,10 +45,14 @@ static int
 stat_slink(char *pn, struct stat *st)
 {
   int fd = open(pn, O_RDONLY | O_NOFOLLOW);
-  if(fd < 0)
+  if(fd < 0){
+    // printf("stat_slink: open failed: %s \n", pn);
     return -1;
-  if(fstat(fd, st) != 0)
+  }
+  if(fstat(fd, st) != 0){
+    // printf("stat_slink: fstat failed: %s \n", pn);
     return -1;
+  }
   return 0;
 }
 
@@ -76,9 +80,10 @@ testsymlink(void)
 
   if (stat_slink("/testsymlink/b", &st) != 0)
     fail("failed to stat b");
-  if(st.type != T_SYMLINK)
+  if(st.type != T_SYMLINK) {
+    printf("symlinktest: st.type = %d\n", st.type);
     fail("b isn't a symlink");
-
+  }
   fd2 = open("/testsymlink/b", O_RDWR);
   if(fd2 < 0)
     fail("failed to open b");

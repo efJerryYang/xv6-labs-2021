@@ -252,8 +252,9 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
+    if((type == T_FILE || type == T_SYMLINK) && (ip->type == T_FILE || ip->type == T_DEVICE || ip->type == T_SYMLINK)){
       return ip;
+    }
     iunlockput(ip);
     return 0;
   }
@@ -309,18 +310,50 @@ sys_open(void)
       return -1;
     }
     ilock(ip);
+    // printf("after ilock(ip): ip->type: %d\n", ip->type);
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
       end_op();
       return -1;
     }
-  }
+    int link_count = 0;
+    if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+      SIMLINK_TAG:
+      // printf("upder SIMLINK_TAG: ip->type: %d\n", ip->type);
+      link_count++;
+      // char buf[MAXPATH];
+      n = readi(ip, 0, (uint64)path, 0, MAXPATH);
+      if (n < 0) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      path[n] = '\0';
+      iunlockput(ip);
+      if((ip = namei(path)) == 0){
+        end_op();
+        return -1;
+      }
+      ilock(ip);
+      if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+        // printf("ip->type: %d\n", ip->type);
+        if (link_count > 10) {
+          iunlockput(ip);
+          end_op();
+          return -1;
+        }
+        goto SIMLINK_TAG;
+      }
+    }
 
+  }
+  // printf("after iter: ip->type: %d\n", ip->type);
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
     iunlockput(ip);
     end_op();
     return -1;
   }
+  // printf("before fd get: ip->type: %d\n", ip->type);
 
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
@@ -329,6 +362,7 @@ sys_open(void)
     end_op();
     return -1;
   }
+  // printf("after fd get: ip->type: %d\n", ip->type);
 
   if(ip->type == T_DEVICE){
     f->type = FD_DEVICE;
@@ -337,6 +371,8 @@ sys_open(void)
     f->type = FD_INODE;
     f->off = 0;
   }
+  // printf("ip->type: %d\n", ip->type);
+
   f->ip = ip;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
@@ -344,7 +380,8 @@ sys_open(void)
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
   }
-
+  // printf("ip->type: %d\n", ip->type);
+  // printf("sys_open: ip.type = %d, f.type = %d\n", ip->type, f->type);
   iunlock(ip);
   end_op();
 
@@ -484,23 +521,7 @@ sys_pipe(void)
   }
   return 0;
 }
-/**
-uint64
-sys_mkdir(void)
-{
-  char path[MAXPATH];
-  struct inode *ip;
 
-  begin_op();
-  if(argstr(0, path, MAXPATH) < 0 || (ip = create(path, T_DIR, 0, 0)) == 0){
-    end_op();
-    return -1;
-  }
-  iunlockput(ip);
-  end_op();
-  return 0;
-}
- */
 uint64
 sys_symlink(void)
 {
@@ -510,9 +531,12 @@ sys_symlink(void)
   begin_op();
   if(argstr(0, name, MAXPATH) < 0 || argstr(1, target, MAXPATH) < 0){
     end_op();
+    // printf("sys_symlink: argstr failed\n");
     return -1;
   }
-  if ((ip = create(name, T_SYMLINK, 0, 0)) == 0){
+  // printf("name: %s, target: %s, strlen(target): %d\n", name, target, strlen(target));
+  if ((ip = create(target, T_SYMLINK, 0, 0)) == 0){
+    // printf("sys_symlink: create failed, ip = %p\n", ip);
     end_op();
     return -1;
   }
@@ -520,11 +544,13 @@ sys_symlink(void)
   // Currently, I am not sure user_src is 0 or 1. 0 means kernel, 1 means user.
   // off is the offset in the file, n is the number of bytes to write.
   // off = 0, n = strlen(target)
-  if (writei(ip, 0, (uint64)target, 0, strlen(target)) != strlen(target)){
+  // printf("ip.type: %d\n", ip->type);
+  if (writei(ip, 0, (uint64)name, 0, strlen(name)) != strlen(name)){
+    // printf("sys_symlink: writei failed\n");
     end_op();
     return -1;
   }
-  
+  // printf("ip.type: %d\n", ip->type);
   iunlockput(ip);
   end_op();
 
