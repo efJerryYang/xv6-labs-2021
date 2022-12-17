@@ -484,3 +484,49 @@ sys_pipe(void)
   }
   return 0;
 }
+/**
+uint64
+sys_mkdir(void)
+{
+  char path[MAXPATH];
+  struct inode *ip;
+
+  begin_op();
+  if(argstr(0, path, MAXPATH) < 0 || (ip = create(path, T_DIR, 0, 0)) == 0){
+    end_op();
+    return -1;
+  }
+  iunlockput(ip);
+  end_op();
+  return 0;
+}
+ */
+uint64
+sys_symlink(void)
+{
+  char name[MAXPATH], target[MAXPATH];
+  struct inode *ip;
+
+  begin_op();
+  if(argstr(0, name, MAXPATH) < 0 || argstr(1, target, MAXPATH) < 0){
+    end_op();
+    return -1;
+  }
+  if ((ip = create(name, T_SYMLINK, 0, 0)) == 0){
+    end_op();
+    return -1;
+  }
+  // int writei(struct inode *ip, int user_src, uint64 src, uint off, uint n);
+  // Currently, I am not sure user_src is 0 or 1. 0 means kernel, 1 means user.
+  // off is the offset in the file, n is the number of bytes to write.
+  // off = 0, n = strlen(target)
+  if (writei(ip, 0, (uint64)target, 0, strlen(target)) != strlen(target)){
+    end_op();
+    return -1;
+  }
+  
+  iunlockput(ip);
+  end_op();
+
+  return 0;
+}
