@@ -32,7 +32,7 @@ barrier()
   //
   // printf("==================== Entering barrier() ====================\n");
   pthread_mutex_lock(&bstate.barrier_mutex);
-  printf("nthread = %d, round = %d\n", bstate.nthread, bstate.round);
+  // printf("nthread = %d, round = %d\n", bstate.nthread, bstate.round);
   bstate.nthread++;
   while(bstate.nthread != nthread && bstate.nthread != 0){
     int current_round = bstate.round;
