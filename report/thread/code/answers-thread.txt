@@ -1,0 +1,30 @@
+1. **Why are there missing keys with 2 threads, but not with 1 thread? Identify a sequence of events with 2 threads that can lead to a key being missing. Submit your sequence with a short explanation in answers-thread.txt**
+
+If multiple threads execute the program, race conditions may occur due to the lack of locks on the hash table when threads access it simultaneously. This can lead to conflicting updates and unpredictable behavior, such as when multiple threads try to insert or update entries in the table at the same time.
+
+For example, consider a scenario where `thread 0` and `thread 1` both try to add a key-value pair to `bucket 0`. It may be difficult to determine what happened during the insert process, which could potentially result in many entries being lost from the linked entry list.
+
+For instance, suppose the hash table initially has the following structure:
+
+```txt
+index  pointers   entries
+  0    [   --]--> [(k1, v1), --]--> [(k2, v2), --]--> NULL
+  1    [   --]--> NULL
+ ...
+```
+
+Now, let's say that `thread 0` tries to insert a key-value pair `(k3, v3)` into `bucket 0`, while `thread 1` also wants to insert a key-value pair `(k4, v4)` into the same bucket. If `thread 0` enters the insert function first and executes up to the line `e->next = n;` before the entry pointer is updated to link to the newly inserted entry struct, then `thread 0` may switch to `thread 1`, which also enters the insert function and successfully updates the entry pointer to point to the entry with key pair `(k4, v4)`.
+
+As a result, the structure of the first bucket would look like this:
+
+```txt
+  0    [   --]--> [(k4, v4), --]--> [(k2, v2), --]--> NULL
+                                    ^
+                                    |
+                                    |
+                    [(k3, v3), --]--+
+```
+
+When the switch back to `thread 0` and it continues executing the code `*p = e`, it could cause the entry `[(k4, v4), ----]---->` to be lost. This is the cause of missing keys in this program.
+
+To solve this issue, we can add a lock to each bucket to prevent race conditions. This way, multiple threads can work concurrently on different buckets without causing missing entries. Different approaches can be taken to implement this solution, but the provided lock and unlock statements make it easy to implement this solution.
