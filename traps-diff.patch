@@ -1,0 +1,321 @@
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 0000000..e9c3a87
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,6 @@
++{
++    "files.associations": {
++        "proc.h": "c",
++        "defs.h": "c"
++    }
++}
+\ No newline at end of file
+diff --git a/Makefile b/Makefile
+index 7a7e380..bc4d47a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -188,6 +188,7 @@ UPROGS=\
+ 	$U/_grind\
+ 	$U/_wc\
+ 	$U/_zombie\
++	$U/_alarmtest\
+ 
+ 
+ 
+diff --git a/answers-traps.txt b/answers-traps.txt
+new file mode 100644
+index 0000000..28a5eaf
+--- /dev/null
++++ b/answers-traps.txt
+@@ -0,0 +1,7 @@
++1. a0-a7, a2
++2. `  26:	45b1                	li	a1,12`, g is also contained in this instruction, because the result of f(8)+1 is computed directly, so that both the call for f and g is ignored for optimizing purpose
++3. 0x0000000000000628 <printf>
++4. 1528(ra) = 0x628 = 1576, so the ra = 1576 - 1528 = 48
++5. "He110 World", 72 6c 64 stands for r l d, and hex(57616) = 0xe110
++6. It depends on how the compiler handle the undefined condition. It might be the value of a2 which is not used but may contain value, so that the result may be arbitrary. Or the compiler may just ignore the unspecified value here, so there may be no value displayed here.
++
+diff --git a/kernel/defs.h b/kernel/defs.h
+index 3564db4..9224b0f 100644
+--- a/kernel/defs.h
++++ b/kernel/defs.h
+@@ -80,6 +80,7 @@ int             pipewrite(struct pipe*, uint64, int);
+ void            printf(char*, ...);
+ void            panic(char*) __attribute__((noreturn));
+ void            printfinit(void);
++void            backtrace(void);
+ 
+ // proc.c
+ int             cpuid(void);
+diff --git a/kernel/printf.c b/kernel/printf.c
+index e1347de..2e17916 100644
+--- a/kernel/printf.c
++++ b/kernel/printf.c
+@@ -121,6 +121,7 @@ panic(char *s)
+   printf("panic: ");
+   printf(s);
+   printf("\n");
++  backtrace();
+   panicked = 1; // freeze uart output from other CPUs
+   for(;;)
+     ;
+@@ -132,3 +133,23 @@ printfinit(void)
+   initlock(&pr.lock, "pr");
+   pr.locking = 1;
+ }
++
++void backtrace(void) {
++  uint64 fp = r_fp();
++  uint64 sp = r_sp();
++  // walk up the stack and print the saved return addresses
++  // printf("fp %p sp %p\n", fp, sp);
++  // printf("backtrace: sp %p fp %p phystop %p fp - phystop %p", sp, fp, PHYSTOP, fp - PHYSTOP);
++  printf("backtrace:\n");
++  // printf("fp %p sp %p\n", fp, sp);
++  // printf("PGROUNDUP(fp) %p\n", PGROUNDUP(fp));
++  // printf("PGROUNDUP(sp) %p\n", PGROUNDUP(sp));
++  // printf("PGROUNDDOWN(fp) %p\n", PGROUNDDOWN(fp));
++  // printf("PGROUNDDOWN(sp) %p\n", PGROUNDDOWN(sp));
++  while(PGROUNDDOWN(sp) < fp && fp < PGROUNDUP(sp)) {
++    uint64 ra = *(uint64*)(fp - 8);
++    printf("%p\n", ra);
++    fp = *(uint64*)(fp - 16);
++  }
++  // printf("fp %p sp %p\n", fp, sp);
++}
+\ No newline at end of file
+diff --git a/kernel/proc.c b/kernel/proc.c
+index 22e7ce4..d2244c1 100644
+--- a/kernel/proc.c
++++ b/kernel/proc.c
+@@ -140,6 +140,8 @@ found:
+   memset(&p->context, 0, sizeof(p->context));
+   p->context.ra = (uint64)forkret;
+   p->context.sp = p->kstack + PGSIZE;
++  p->ticks_count = 0;
++  p->handling_signal = 0;
+ 
+   return p;
+ }
+diff --git a/kernel/proc.h b/kernel/proc.h
+index f6ca8b7..56b3bfa 100644
+--- a/kernel/proc.h
++++ b/kernel/proc.h
+@@ -105,4 +105,17 @@ struct proc {
+   struct file *ofile[NOFILE];  // Open files
+   struct inode *cwd;           // Current directory
+   char name[16];               // Process name (debugging)
++  void (*handler)();           // function pointer to signal handler
++  int alarm_interval;          // alarm interval in ticks
++  int ticks_count;             // ticks count since last alarm
++  int handling_signal;         // flag to indicate if the process is handling a signal
++  int handler_not_null;        // flat to indicate if the handler is at address 0 / it is null
++
++  int in_a_handler;            // flag to indicate if the process is in a handler
++  void (*old_handler)();       // function pointer to signal handler (before handling a signal
++  int old_alarm_interval;      // alarm interval before handling a signal
++  int old_ticks_count;         // ticks count before handling a signal
++  int old_handling_signal;     // flag to indicate if the process was handling a signal before handling the current signal
++  int old_handler_not_null;    // flag to indicate if the handler was null before handling the current signal
++  struct trapframe *old_trapframe; // trapframe before handling a signal
+ };
+diff --git a/kernel/riscv.h b/kernel/riscv.h
+index 1691faf..357ead6 100644
+--- a/kernel/riscv.h
++++ b/kernel/riscv.h
+@@ -323,6 +323,13 @@ r_ra()
+   return x;
+ }
+ 
++static inline uint64
++r_fp()
++{
++  uint64 x;
++  asm volatile("mv %0, s0" : "=r" (x) );
++  return x;
++}
+ // flush the TLB.
+ static inline void
+ sfence_vma()
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index c1b3670..24bfccd 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -104,6 +104,8 @@ extern uint64 sys_unlink(void);
+ extern uint64 sys_wait(void);
+ extern uint64 sys_write(void);
+ extern uint64 sys_uptime(void);
++extern uint64 sys_sigalarm(void);
++extern uint64 sys_sigreturn(void);
+ 
+ static uint64 (*syscalls[])(void) = {
+ [SYS_fork]    sys_fork,
+@@ -127,6 +129,8 @@ static uint64 (*syscalls[])(void) = {
+ [SYS_link]    sys_link,
+ [SYS_mkdir]   sys_mkdir,
+ [SYS_close]   sys_close,
++[SYS_sigalarm] sys_sigalarm,
++[SYS_sigreturn] sys_sigreturn,
+ };
+ 
+ void
+diff --git a/kernel/syscall.h b/kernel/syscall.h
+index bc5f356..c09f4bd 100644
+--- a/kernel/syscall.h
++++ b/kernel/syscall.h
+@@ -20,3 +20,5 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_sigalarm 22
++#define SYS_sigreturn 23
+\ No newline at end of file
+diff --git a/kernel/sysproc.c b/kernel/sysproc.c
+index e8bcda9..b36be9f 100644
+--- a/kernel/sysproc.c
++++ b/kernel/sysproc.c
+@@ -58,6 +58,7 @@ sys_sleep(void)
+   int n;
+   uint ticks0;
+ 
++  backtrace();
+   if(argint(0, &n) < 0)
+     return -1;
+   acquire(&tickslock);
+@@ -95,3 +96,48 @@ sys_uptime(void)
+   release(&tickslock);
+   return xticks;
+ }
++
++uint64 sys_sigalarm(void) {
++  struct proc *p = myproc();
++  int n;
++  uint64 addr;
++  if(argint(0, &n) < 0)
++    return -1;
++  if(argaddr(1, &addr) < 0)
++    return -1;
++  if(p->handling_signal == 1 || p->in_a_handler == 1)
++    return -1;
++  p->alarm_interval = n;
++  // printf("alarm_interval: %d\n", p->alarm_interval);
++  p->handler = (void *) addr; // syntax of casting a function pointer is like (void (*)()) ptr
++  p->handling_signal = 1;
++  if (addr == 0)
++    p->handler_not_null = 0;
++  else 
++    p->handler_not_null = 1;
++  // printf("handler: %p\n", p->handler);
++  return 0;
++}
++uint64 sys_sigreturn(void)
++{
++  struct proc *p = myproc();
++  if(p->handling_signal == 0)
++    return -1;
++  p->handling_signal = 0;
++  p->alarm_interval = 0;
++  p->handler = 0;
++  // if (p->handler_not_null == 0) {
++    // means that the handler was null
++    // so we need to restore the old trapframe
++    memmove(p->trapframe, p->old_trapframe, sizeof(struct trapframe));
++    kfree(p->old_trapframe);
++    p->old_trapframe = 0;
++    p->alarm_interval = p->old_alarm_interval;
++    p->handler_not_null = p->old_handler_not_null;
++    p->handler = p->old_handler;
++    p->handling_signal = p->old_handling_signal;
++  // }
++  p->in_a_handler = 0;
++  return 0;
++  
++}
+diff --git a/kernel/trap.c b/kernel/trap.c
+index a63249e..08ba836 100644
+--- a/kernel/trap.c
++++ b/kernel/trap.c
+@@ -16,6 +16,13 @@ void kernelvec();
+ 
+ extern int devintr();
+ 
++// Define a function table to call the periodic function indirectly.
++// extern void periodic(void);
++
++// void (*func_table[])(void) = {
++//   [0] periodic,
++// };
++
+ void
+ trapinit(void)
+ {
+@@ -77,8 +84,36 @@ usertrap(void)
+     exit(-1);
+ 
+   // give up the CPU if this is a timer interrupt.
+-  if(which_dev == 2)
++  if(which_dev == 2) { 
++    p->ticks_count++;
++    // printf("ticks_count = %d\n", p->ticks_count);
++    if (p->ticks_count >= p->alarm_interval && p->alarm_interval != 0) {
++      p->ticks_count = 0;
++      // printf("alarm interval expired\n");
++      // problem is caused by executing the handler with address 0 (sepc=0x0000000000000000)
++      // if (p->handler != 0){
++      //   p->in_a_handler = 1;
++      //   ((void (*)()) p->handler)();
++      // } else {
++        // printf("alarm!\n");
++        //  ((void (*)()) p->handler)();
++        // call a function at address zero using asm
++        // asm("jalr zero, 0(zero)");
++        // asm volatile("jalr x0");
++      if (!p->in_a_handler) {
++        p->in_a_handler = 1;
++        p->old_trapframe = (struct trapframe *)kalloc();
++        memmove(p->old_trapframe, p->trapframe, sizeof(struct trapframe));
++        p->old_alarm_interval = p->alarm_interval;
++        p->old_ticks_count = p->ticks_count;
++        p->old_handling_signal = p->handling_signal;
++        p->old_handler_not_null = p->handler_not_null;
++        p->old_handler = p->handler;
++        p->trapframe->epc = (uint64) p->handler;
++      }
++    }
+     yield();
++  }
+ 
+   usertrapret();
+ }
+diff --git a/time.txt b/time.txt
+new file mode 100644
+index 0000000..1e8b314
+--- /dev/null
++++ b/time.txt
+@@ -0,0 +1 @@
++6
+diff --git a/user/user.h b/user/user.h
+index b71ecda..578c294 100644
+--- a/user/user.h
++++ b/user/user.h
+@@ -40,3 +40,7 @@ void free(void*);
+ int atoi(const char*);
+ int memcmp(const void *, const void *, uint);
+ void *memcpy(void *, const void *, uint);
++
++int sigalarm(int ticks, void (*handler)());
++int sigreturn(void);
++void periodic(void);
+\ No newline at end of file
+diff --git a/user/usys.pl b/user/usys.pl
+index 01e426e..3c258dc 100755
+--- a/user/usys.pl
++++ b/user/usys.pl
+@@ -36,3 +36,5 @@ entry("getpid");
+ entry("sbrk");
+ entry("sleep");
+ entry("uptime");
++entry("sigalarm");
++entry("sigreturn");
+\ No newline at end of file
