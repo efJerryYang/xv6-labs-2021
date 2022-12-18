@@ -301,11 +301,11 @@ After the modification applied, all tests passed. -->
 
 ## Reference
 
-1. [Xv6 Book Chapter 7: Scheduling](https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf)
-2. [MIT 6.S081 Lab: Multithreading](https://pdos.csail.mit.edu/6.828/2021/labs/thread.html)
-3. [Integer Calling convention](https://tclin914.github.io/77838749/)
-4. [Lock and Unlock A Mutex](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_lock.html)
-5. [Initialise or Destroy A Mutex](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_init.html)
-6. [Thread Creation](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_create.html)
-7. [Wait on A Condition](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_wait.html)
-8. [Signal or Broadcast A Condition](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_broadcast.html)
+1. [Xv6 Book Chapter 7: Scheduling](https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf) - https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf
+2. [MIT 6.S081 Lab: Multithreading](https://pdos.csail.mit.edu/6.828/2021/labs/thread.html) - https://pdos.csail.mit.edu/6.828/2021/labs/thread.html
+3. [Integer Calling convention](https://tclin914.github.io/77838749/) - https://tclin914.github.io/77838749/
+4. [Lock and Unlock A Mutex](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_lock.html) - https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_lock.html
+5. [Initialise or Destroy A Mutex](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_init.html) - https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_mutex_init.html
+6. [Thread Creation](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_create.html) - https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_create.html
+7. [Wait on A Condition](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_wait.html) - https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_wait.html
+8. [Signal or Broadcast A Condition](https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_broadcast.html) - https://pubs.opengroup.org/onlinepubs/007908799/xsh/pthread_cond_broadcast.html

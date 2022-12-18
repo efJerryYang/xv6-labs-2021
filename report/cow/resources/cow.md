@@ -330,7 +330,7 @@ When we fixed this bug, the `usertests` were able to run until the `copyout` fun
 
 ## Reference
 
-1. [xyfJASON's GitHub](https://github.com/xyfJASON/xv6-mit-6.S081-2021)
-2. [NebulorDang's GitHub](https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c)
-3. [巴勃罗·捏捏达's CSDN](https://blog.csdn.net/qq_43845988/article/details/126045943)
-4. [MIT 6.S081 Lab: Copy-on-Write Fork for xv6](https://pdos.csail.mit.edu/6.828/2021/labs/cow.html)
+1. [xyfJASON's GitHub](https://github.com/xyfJASON/xv6-mit-6.S081-2021) - https://github.com/xyfJASON/xv6-mit-6.S081-2021
+2. [NebulorDang's GitHub](https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c) - https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c
+3. [巴勃罗·捏捏达's CSDN](https://blog.csdn.net/qq_43845988/article/details/126045943) - https://blog.csdn.net/qq_43845988/article/details/126045943
+4. [MIT 6.S081 Lab: Copy-on-Write Fork for xv6](https://pdos.csail.mit.edu/6.828/2021/labs/cow.html) - https://pdos.csail.mit.edu/6.828/2021/labs/cow.html
