@@ -97,7 +97,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 In `kalloc.c`, there are several slight modifications that should be applied. First, define the `page_reference_count` array with a size of `(PHYSTOP-KERNBASE) / PGSIZE`, as suggested by the `cowtest.c` file shown below:
 <!-- For `kalloc.c`, there is so many slight modifications should be applied. First, define the `page_reference_count` array with the size of `(PHYSTOP-KNERBASE) / PGSIZE`, which is a hint from `cowtest.c` shown below: -->
 
-```c 
+```c
 void
 simpletest()
 {
@@ -115,7 +115,7 @@ However, the currently implemented approach theoretically saves more memory.
 
 The next modification to be made in `kalloc.c` is applied to the `kalloc` function. We should set the reference count of each newly allocated memory block to 1.
 
-```c 
+```c
 void *
 kalloc(void)
 {
@@ -388,11 +388,11 @@ int handle_cow_fault(pagetable_t pagetable, uint64 va, uint64 *npa) {
 
 ## Make grade
 
-![cow-make-grade](cow-make-grade-copyout-kerneltrap.png)
+![cow-make-grade](./resources/cow-make-grade-copyout-kerneltrap.png)
 
 ## Reference
 
-1. [xyfJASON's GitHub](https://github.com/xyfJASON/xv6-mit-6.S081-2021) - https://github.com/xyfJASON/xv6-mit-6.S081-2021
-2. [NebulorDang's GitHub](https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c) - https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c
-3. [巴勃罗·捏捏达's CSDN](https://blog.csdn.net/qq_43845988/article/details/126045943) - https://blog.csdn.net/qq_43845988/article/details/126045943
-4. [MIT 6.S081 Lab: Copy-on-Write Fork for xv6](https://pdos.csail.mit.edu/6.828/2021/labs/cow.html) - https://pdos.csail.mit.edu/6.828/2021/labs/cow.html
+1. [xyfJASON's GitHub](https://github.com/xyfJASON/xv6-mit-6.S081-2021)
+2. [NebulorDang's GitHub](https://github.com/NebulorDang/xv6-lab-2021/blob/cow/kernel/trap.c)
+3. [巴勃罗·捏捏达's CSDN](https://blog.csdn.net/qq_43845988/article/details/126045943)
+4. [MIT 6.S081 Lab: Copy-on-Write Fork for xv6](https://pdos.csail.mit.edu/6.828/2021/labs/cow.html)

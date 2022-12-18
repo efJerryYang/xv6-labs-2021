@@ -6,7 +6,7 @@
 
     According to the RISC-V calling convention, arguments to functions are typically passed in registers `a0-a7`. In the `main` function's call to `printf`, the argument `13` is passed in register `a2`. You can refer to the official RISC-V manual or the diagram I provided for more information on the convention for using registers.
 
-    ![registers](riscv-registers.png)
+    ![registers](./resources/riscv-registers.png)
 
 2. **Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)**
 
@@ -114,7 +114,7 @@
 
 ## Backtrace (moderate)
 
-![stack](the-stack.png)
+![stack](./resources/the-stack.png)
 
 To print the saved return address, according to the stack frame of xv6 os shown above, we can walk up the stack by iteratively updating the value of the frame pointer (`fp`).
 <!-- According to the stack frame of xv6 os above, what we should do is to walk up the stack and print the saved return addresses by updating the value of `fp` (frame pointer) iteratively. -->
@@ -183,7 +183,7 @@ backtrace:
 0x0000000080001c9e
 ```
 
-<!-- ![bttest](bttest.png) -->
+<!-- ![bttest](./resources/bttest.png) -->
 
 ```sh
 lydia@ubuntu-22-hp-040f1b4d:~/projects/xv6-labs-2021$ addr2line -e kernel/kernel
@@ -195,7 +195,7 @@ lydia@ubuntu-22-hp-040f1b4d:~/projects/xv6-labs-2021$ addr2line -e kernel/kernel
 /home/lydia/projects/xv6-labs-2021/kernel/trap.c:83
 ```
 
-<!-- ![addr2line](addr2line.png) -->
+<!-- ![addr2line](./resources/addr2line.png) -->
 
 ## Alarm (hard)
 
@@ -521,10 +521,10 @@ $
 
 ## Make grade
 
-![traps-make-grade](traps-make-grade.png)
+![traps-make-grade](./resources/traps-make-grade.png)
 
 ## Reference
 
-1. [MIT 6.S081 2021](https://pdos.csail.mit.edu/6.828/2021/labs/traps.html) - https://pdos.csail.mit.edu/6.828/2021/labs/traps.html
-2. [Lecture Slides](https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf) - https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf
-3. [Question Answers](https://blog.csdn.net/DreamPoem/article/details/121787023) - https://blog.csdn.net/DreamPoem/article/details/121787023
+1. [MIT 6.S081 2021](https://pdos.csail.mit.edu/6.828/2021/labs/traps.html)
+2. [Lecture Slides](https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf)
+3. [Question Answers](https://blog.csdn.net/DreamPoem/article/details/121787023)
