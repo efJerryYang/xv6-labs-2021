@@ -14,6 +14,8 @@ extern char trampoline[], uservec[], userret[];
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 extern int page_reference_count[]; // array size is PHYSTOP/PGSIZE
+extern char end[]; // first address after kernel.
+                   // defined by kernel.ld.
 extern int devintr();
 
 void
@@ -74,8 +76,10 @@ usertrap(void)
     // page fault
     uint64 va = r_stval(); // store the faulting address
     // free previous page and add the newly allocated page to the pagetable
-    if(va >= MAXVA || (va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp)-PGSIZE))
+    if(va >= MAXVA || (va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp)-PGSIZE)){
+      p->killed = 1;
       goto trap_err;
+    }
     uint64 * pte = walk(p->pagetable, va, 0);
     if (pte == 0) {
       panic("usertrap(): pte should exist\n");

@@ -55,11 +55,11 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
-  if ((uint64)pa >= KERNBASE) {
-    if (page_reference_count[PGREF_CNT((uint64)pa)] <= 0)
-      panic("kfree: page is already free");
-    if(--page_reference_count[PGREF_CNT((uint64)pa)] > 0)
-      return;
+  if (page_reference_count[PGREF_CNT((uint64)pa)] > 1) {
+    page_reference_count[PGREF_CNT((uint64)pa)]--;
+    return;
+  } else {
+    page_reference_count[PGREF_CNT((uint64)pa)] = 0;
   }
 
 
