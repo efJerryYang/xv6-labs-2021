@@ -1,0 +1,105 @@
+
+1. **Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?**
+
+    According to the RISC-V calling convention, arguments to functions are typically passed in registers `a0-a7`. In the `main` function's call to `printf`, the argument `13` is passed in register `a2`. You can refer to the official RISC-V manual or the diagram I provided for more information on the convention for using registers.
+
+    ![registers](riscv-registers.png)
+
+2. **Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)**
+
+    ```S
+    # in the main function
+    printf("%d %d\n", f(8)+1, 13);
+    24: 4635                 li     a2,13
+    26: 45b1                 li     a1,12
+    28: 00000517             auipc  a0,0x0
+    2c: 7b050513             addi   a0,a0,1968 # 7d8 <malloc+0xe8>
+    30: 00000097             auipc  ra,0x0
+    34: 608080e7             jalr   1544(ra) # 638 <printf>
+    ```
+
+    In the `main` function, the call to function `f` is found as the instruction `28: 00000517             auipc  a0,0x0`, which loads the address of `f` into register `a0` and prepares to jump to it. However, the call to `f` has been optimized by the compiler and inlined into a single instruction, `26: 45b1                 li     a1,12`, which loads the immediate value `12` into register `a1`. This value represents the result of calling `f(8)+1`, as indicated by the `printf` statement.
+
+    The call to function `g` is similarly inlined and optimized by the compiler. In the original definition of function `f`, the call to `g` appears as the instruction `14: 250d                addiw a0,a0,3`, which adds the immediate value `3` to the value in register `a0`. However, this call has benn inlined and simplified to a load-immediate instruction `li a1,12`, as inferred from the difinition of function `f`.
+
+    Below are the declarations of function `g` and `f`, and the original call for function `g` is in the definition of function `f`.
+
+    ```S
+    0000000000000000 <g>:
+
+    int g(int x) {
+    0: 1141                 addi  sp,sp,-16
+    2: e422                 sd    s0,8(sp)
+    4: 0800                 addi  s0,sp,16
+    return x+3;
+    }
+    6: 250d                 addiw a0,a0,3
+    8: 6422                 ld    s0,8(sp)
+    a: 0141                 addi  sp,sp,16
+    c: 8082                 ret
+
+    000000000000000e <f>:
+
+    int f(int x) {
+    e: 1141                 addi  sp,sp,-16
+    10: e422                sd    s0,8(sp)
+    12: 0800                addi  s0,sp,16
+    return g(x);
+    }
+    14: 250d                addiw a0,a0,3
+    16: 6422                ld    s0,8(sp)
+    18: 0141                addi  sp,sp,16
+    1a: 8082                ret
+    ```
+
+3. **At what address is the function printf located?**
+
+    ```S
+    0000000000000638 <printf>:
+
+    void
+    printf(const char *fmt, ...)
+    {
+     638: 711d                   addi  sp,sp,-96
+     63a: ec06                   sd    ra,24(sp)
+     63c: e822                   sd    s0,16(sp)
+     63e: 1000                   addi  s0,sp,32
+     ...
+     662: dce080e7               jalr  -562(ra) # 42c <vprintf>
+    }
+     666: 60e2                   ld    ra,24(sp)
+     668: 6442                   ld    s0,16(sp)
+     66a: 6125                   addi  sp,sp,96
+     66c: 8082                   ret
+    ```
+
+    The function `printf` is located at address `0x0000000000000638` in the assembly code of `call.asm`. It's important to note that the absolute address of a function may change depending on the structure and content of the program. For example, before working on the traps lab, the address of `printf` was `0x0000000000000628` on my machine rather than the current address shown in the code.
+
+4. **What value is in the register ra just after the jalr to printf in main?**
+
+    After the `jalr` instruction at address `0x34`, the value in register `ra` will be the address of the instruction immediately following the `jalr` instruction. In this case, the address of the instruction following the `jalr` instruction should be `0x38`, so the value in register `ra` will be `0x38`.
+
+5. **Run the following code.**
+
+    ```c
+    unsigned int i = 0x00646c72;
+    printf("H%x Wo%s", 57616, &i);
+    ```
+
+    **What is the output? Here's an ASCII table that maps bytes to characters.**
+
+    **The output depends on that fact that the RISC-V is little-endian. If the RISC-V were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?**
+
+    The output of the code should be `He110 World` because the integer value `57616` is stored in little-endian format as the bytes `72`, `6c`, and `64`, which correspond to the ASCII characters `'r'`, `'l'`, and `'d'`, respectively. In little-endian architecture, the lowest-order byte (the rightmost digit in the hexadecimal representation) is stored at the lowest memory address.
+
+    If the RISC-V were instead big-endian, the integer value `57616` would be stored as the bytes `64`, `6c`, and `72`, which would correspond to the ASCII characters `'d'`, `'l'`, and `'r'`, respectively. In this case, to yield the same output as in little-endian architecture, you would need to set i to the value `0x00726c64`. This value would be stored as the bytes `72`, `6c`, and `64`, which would correspond to the ASCII characters `'r'`, `'l'`, and `'d'`. There is no need to change the value of `57616`, as it would be printed as the same hexadecimal value as it is, regardless of the endianness of the architecture.
+
+6. **In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?**
+
+    ```c
+    printf("x=%d y=%d", 3);
+    ```
+
+    In the given code, afer the string "y=" is printed, there might not be a value displayed or a arbitrary value, because there is only one argument provided to the `printf` function, which corresponds to the format specifier `%d` for the first integer value.
+
+    The second format specifier `%d` has no corresponding argument, so the behavior of the `printf` function is undefined. This means that the output of this code could vary depending on how the compiler handles the situation. It is possible that the value of the unassigned register `a2` could be used as the second argument, resulting in an arbitrary value being printed. Alternatively, the compiler may simply ignore the second format specifier and not print anything after "y=".
