@@ -72,7 +72,7 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
+  } else if(r_scause() == 15){
     // page fault
     uint64 va = r_stval(); // store the faulting address
     // free previous page and add the newly allocated page to the pagetable

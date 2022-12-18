@@ -62,7 +62,6 @@ kfree(void *pa)
     page_reference_count[PGREF_CNT((uint64)pa)] = 0;
   }
 
-
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
