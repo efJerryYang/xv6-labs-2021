@@ -307,16 +307,14 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  // char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
-    // The reason we use walk here is to validate the PTE flags.
-    // So that we can make sure the PTE is valid and needs to be copied.
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
+
     flags = (PTE_FLAGS(*pte) & (~PTE_W)) | PTE_COW; // set not writable, set COW
     *pte = PA2PTE(pa) | flags;
     if(mappages(new, i, PGSIZE, pa, flags) != 0)
@@ -325,7 +323,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       goto err;
     // increase the page reference count
     page_reference_count[PGREF_CNT(pa)]++;
-  } // examine the old pagetable
+  }
   return 0;
 
  err:
@@ -365,14 +363,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     if(n > len)
       n = len;
     if (*pte & PTE_COW) {
-      uint flags = (PTE_FLAGS(*pte) & (~PTE_COW)) | PTE_W;
-      char *page;
-      if((page = kalloc()) == 0)
-        panic("copyout(): out of memory");
-      memmove(page, (char*)pa0, PGSIZE);
-      *pte = PA2PTE((uint64)page) | flags;
-      kfree((void*)pa0);
-      pa0 = (uint64) page;
+      if (handle_cow_fault(pagetable, dstva, &pa0) < 0)
+        return -1;
     }
     memmove((void *)(pa0 + (dstva - va0)), src, n);
 
@@ -380,6 +372,36 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     src += n;
     dstva = va0 + PGSIZE;
   }
+  return 0;
+}
+
+int handle_cow_fault(pagetable_t pagetable, uint64 va, uint64 *npa) {
+  pte_t *pte;
+  uint64 pa;
+  char *page;
+  uint flags;
+
+  pte = walk(pagetable, va, 0);
+  if (pte == 0){
+    return -1;
+  }
+  if ((*pte & PTE_V) == 0){
+    return -1;
+  }
+  if ((*pte & PTE_COW) == 0) {
+    return -1;
+  }
+  pa = PTE2PA(*pte);
+  flags = (PTE_FLAGS(*pte) & (~PTE_COW)) | PTE_W;
+  if ((page = kalloc()) == 0){
+    return -1;
+  }
+  memmove(page, (char*)pa, PGSIZE);
+  *pte = PA2PTE((uint64)page) | flags;
+  kfree((void*)pa);
+  pa = (uint64) page;
+  *npa = pa;
+
   return 0;
 }
 

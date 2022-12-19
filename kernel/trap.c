@@ -73,7 +73,6 @@ usertrap(void)
 
     syscall();
   } else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
-    printf("usertrap(): page fault\n");
     // page fault
     uint64 va = r_stval(); // store the faulting address
     // free previous page and add the newly allocated page to the pagetable
@@ -83,25 +82,19 @@ usertrap(void)
     }
     uint64 * pte = walk(p->pagetable, va, 0);
     if (pte == 0) {
-      panic("usertrap(): pte should exist\n");
+      p->killed = 1;
+      goto trap_err;
     }
     if ((*pte & PTE_V) == 0) {
-      panic("usertrap(): page should exist\n");
+      p->killed = 1;
+      goto trap_err;
     }
     if ((*pte & PTE_COW)) {
       uint64 pa = PTE2PA(*pte);
-      uint flags = PTE_FLAGS(*pte);
-      char* page;  // allocate a new page
-      if ((page = kalloc()) == 0) {
+      if (handle_cow_fault(p->pagetable, va, &pa) < 0) {
         p->killed = 1;
         goto trap_err;
       }
-      memmove(page, (char*)pa, PGSIZE); // copy the content of the old page to the new page
-      *pte = PA2PTE((uint64)page) | (flags & ~PTE_COW) | PTE_W;
-
-      // free the old page if the last reference to it is removed
-        kfree((void*)pa);
-        pa = (uint64)page;
     }
   } else if((which_dev = devintr()) != 0){
     // ok
