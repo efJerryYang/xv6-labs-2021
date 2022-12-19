@@ -324,6 +324,68 @@ The first test is MAXVAplus, and after severl attemps and printf to print out th
 When we fixed this bug, the `usertests` were able to run until the `copyout` function, but we still encountered a kernel trap. Unfortunately, due to time constraints, we were not able to fully resolve this issue before writing reports of other labs.
 <!-- When I fix this bug, the usertests can run to copyout, but things still not work correctly here and yield a kernel trap. Due to the limited time now, I have to write reports for other labs, so this is just the result I have till now. -->
 
+After further investigation, we have determined that there are only two failed user tests: `copyout` and `pgbad`. These failures appear to be related to the pagetable. It is likely that there is an issue with writing to the pagetable. We should focus our efforts on investigating this issue further.
+
+We have updated the code in the `copyout` and `usertrap` functions to include a separate function called `handle_cow_fault`, which is responsible for handling copy-on-write faults. This improves the readability of the code compared to our previous version. The updated code should look like this:
+<!-- According to a deeper investigation on the issue, we can finally determine that there are only 2 of the usertests failed, including `copyout` and `pgbug`, both of which seemed related to the pagetable. So, we can generally conclude that there must be something go wrong when writing the the pagetable, further checks should be focused on this.
+
+Currently, we have the code in function `copyout` and `usertrap` to handle the COW fault in a separate function `handle_cow_fault`, which enhance the readability of our previous version of code. The updated code should look like this: -->
+
+```c
+// in copyout
+  ...
+    if (*pte & PTE_COW) {
+      if (handle_cow_fault(pagetable, dstva, &pa0) < 0)
+        return -1;
+    }
+  ...
+// in usertrap
+  ...
+    if ((*pte & PTE_COW)) {
+      uint64 pa = PTE2PA(*pte);
+      if (handle_cow_fault(p->pagetable, va, &pa) < 0) {
+        p->killed = 1;
+        goto trap_err;
+      }
+    }
+  ...
+```
+
+Additionally, the definition of the `handle_cow_fault` function is shown below:
+
+```c
+// the definition of handle_cow_fault
+int handle_cow_fault(pagetable_t pagetable, uint64 va, uint64 *npa) {
+  pte_t *pte;
+  uint64 pa;
+  char *page;
+  uint flags;
+
+  pte = walk(pagetable, va, 0);
+  if (pte == 0){
+    return -1;
+  }
+  if ((*pte & PTE_V) == 0){
+    return -1;
+  }
+  if ((*pte & PTE_COW) == 0) {
+    return -1;
+  }
+  pa = PTE2PA(*pte);
+  flags = (PTE_FLAGS(*pte) & (~PTE_COW)) | PTE_W;
+  if ((page = kalloc()) == 0){
+    return -1;
+  }
+  memmove(page, (char*)pa, PGSIZE);
+  *pte = PA2PTE((uint64)page) | flags;
+  kfree((void*)pa);
+  pa = (uint64) page;
+  *npa = pa;
+
+  return 0;
+}
+```
+
 ## Make grade
 
 ![cow-make-grade](cow-make-grade-copyout-kerneltrap.png)
