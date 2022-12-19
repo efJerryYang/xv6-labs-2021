@@ -72,7 +72,8 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if(r_scause() == 15){
+  } else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
+    printf("usertrap(): page fault\n");
     // page fault
     uint64 va = r_stval(); // store the faulting address
     // free previous page and add the newly allocated page to the pagetable
@@ -95,22 +96,12 @@ usertrap(void)
         p->killed = 1;
         goto trap_err;
       }
-      // memset(page, 0, PGSIZE);  // zero the page
       memmove(page, (char*)pa, PGSIZE); // copy the content of the old page to the new page
-      // *pte = 0;                 // clear the PTE, so that we can remap the page
-      // uvmunmap(p->pagetable, PGROUNDDOWN(va), 1, 0);
-      // mappages(p->pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)page, PTE_W | (flags & ~PTE_COW)); // map the page
       *pte = PA2PTE((uint64)page) | (flags & ~PTE_COW) | PTE_W;
 
       // free the old page if the last reference to it is removed
-      // printf("page_reference_count[PGREF_CNT(pa)] = %d\n", page_reference_count[PGREF_CNT(pa)]);
-      // if (page_reference_count[PGREF_CNT(pa)] <= 1) {
-      //   page_reference_count[PGREF_CNT(pa)] = 0;
         kfree((void*)pa);
         pa = (uint64)page;
-      // } else {
-      //   page_reference_count[PGREF_CNT(pa)]--;
-      // }
     }
   } else if((which_dev = devintr()) != 0){
     // ok

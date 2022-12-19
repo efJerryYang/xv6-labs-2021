@@ -80,6 +80,7 @@ copyout(char *s)
       printf("open(README) failed\n");
       exit(1);
     }
+    printf("fd=%d,\n addr\n = %p,\n KERNBASE\n = %p,\n PHYSTOP\n = %p\n", fd, addr, KERNBASE, PHYSTOP);
     int n = read(fd, (void*)addr, 8192);
     if(n > 0){
       printf("read(fd, %p, 8192) returned %d, not -1 or 0\n", addr, n);

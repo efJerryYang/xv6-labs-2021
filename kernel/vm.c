@@ -317,10 +317,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
-    flags = (PTE_FLAGS(*pte) & (~PTE_W)) | PTE_COW;
-    // if((mem = kalloc()) == 0)
-    //   goto err;
-    // memmove(mem, (char*)pa, PGSIZE);
+    flags = (PTE_FLAGS(*pte) & (~PTE_W)) | PTE_COW; // set not writable, set COW
     *pte = PA2PTE(pa) | flags;
     if(mappages(new, i, PGSIZE, pa, flags) != 0)
       goto err;
@@ -328,18 +325,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       goto err;
     // increase the page reference count
     page_reference_count[PGREF_CNT(pa)]++;
-    //   kfree(mem);
-    //   goto err;
-    // }
   } // examine the old pagetable
-  // for (i = 0; i< 512; i++) {
-  //   pte_t *pte = &old[i]; // get pointer to old page table entry
-  //   *pte = *pte & ~PTE_W; // clear write bit
-  //   *pte = *pte | PTE_COW; // set COW bit
-  //   new[i] = *pte;        // copy page table entry directly
-  //   // increase the page reference count
-  //   page_reference_count[PTE2PA(*pte) / PGSIZE]++;
-  // }
   return 0;
 
  err:
@@ -373,32 +359,20 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     va0 = PGROUNDDOWN(dstva);
     pte = walk(pagetable, va0, 0);
     pa0 = PTE2PA(*pte);
-    if(pa0 == 0)
+    if(pa0 == 0 || pte == 0)
       return -1;
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
     if (*pte & PTE_COW) {
-      // if the page is COW, we need to copy the page first
-      // before we can write to it
-      uint flags = PTE_FLAGS(*pte);
+      uint flags = (PTE_FLAGS(*pte) & (~PTE_COW)) | PTE_W;
       char *page;
       if((page = kalloc()) == 0)
         panic("copyout(): out of memory");
       memmove(page, (char*)pa0, PGSIZE);
-      *pte = PA2PTE((uint64)page) | (flags & ~PTE_COW) | PTE_W;
-      // mappages(pagetable, va0, PGSIZE, (uint64)page, PTE_W | (~PTE_COW & PTE_FLAGS(*pte)));
-        // kfree(page);
-        // return -1;
-      // }
-      // decrease the page reference count
-      // if (page_reference_count[PGREF_CNT(pa0)] <= 1) {
-      //   page_reference_count[PGREF_CNT(pa0)] = 0;
-        kfree((void*)pa0);
-        pa0 = (uint64) page;
-      // } else {
-      //   page_reference_count[PGREF_CNT(pa0)]--;
-      // }
+      *pte = PA2PTE((uint64)page) | flags;
+      kfree((void*)pa0);
+      pa0 = (uint64) page;
     }
     memmove((void *)(pa0 + (dstva - va0)), src, n);
 
