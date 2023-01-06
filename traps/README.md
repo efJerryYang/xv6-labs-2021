@@ -107,7 +107,7 @@
     printf("x=%d y=%d", 3);
     ```
 
-    In the given code, afer the string "y=" is printed, there might not be a value displayed or a arbitrary value, because there is only one argument provided to the `printf` function, which corresponds to the format specifier `%d` for the first integer value.
+    In the given code, after the string "y=" is printed, there might not be a value displayed or an arbitrary value, because there is only one argument provided to the `printf` function, which corresponds to the format specifier `%d` for the first integer value.
 
     The second format specifier `%d` has no corresponding argument, so the behavior of the `printf` function is undefined. This means that the output of this code could vary depending on how the compiler handles the situation. It is possible that the value of the unassigned register `a2` could be used as the second argument, resulting in an arbitrary value being printed. Alternatively, the compiler may simply ignore the second format specifier and not print anything after "y=".
     <!-- It depends on how the compiler handle the undefined condition. It might be the value of a2 which is not assigned but may contain value, so that the result may be arbitrary. Or the compiler may just ignore the unspecified value here, so there may be no value displayed here. -->
@@ -116,7 +116,7 @@
 
 ![stack](./resources/the-stack.png)
 
-To print the saved return address, according to the stack frame of xv6 os shown above, we can walk up the stack by iteratively updating the value of the frame pointer (`fp`).
+To print the saved return address, according to the stack frame of xv6 operating system shown above, we can walk up the stack by iteratively updating the value of the frame pointer (`fp`).
 <!-- According to the stack frame of xv6 os above, what we should do is to walk up the stack and print the saved return addresses by updating the value of `fp` (frame pointer) iteratively. -->
 
 One way to do this is to use inline assembly to fetch the values of `sp` and `fp`:
@@ -130,7 +130,7 @@ asm volatile("mv %0, fp" : "=r" (fp));
 However, the xv6 operating system provides encapsulations for inline assembly, so we can instead use the functions `r_fp()` and `r_sp()` to indirectly retrieve the values of these registers.
 <!-- However, there is some encapsulations provided for inline assembly use in xv6, so we don't need to write assembly directly, and we can call the function `r_fp()` and `r_sp()` in an indirect way to get the value from specific registers. -->
 
-To ensure that we only access valid memory during the backtrace, we need to limit the range of the `fp` value to within the page of the stack pointer (`sp`) points to. This can be done by setting the range of `fp` to `PGROUNDDOWN(sp) < fp && fp < PGROUNDUP(sp)`.
+To ensure that we only access valid memory during the `backtrace`, we need to limit the range of the `fp` value to within the page of the stack pointer (`sp`) points to. This can be done by setting the range of `fp` to `PGROUNDDOWN(sp) < fp && fp < PGROUNDUP(sp)`.
 <!-- Moreover, we need to limit the walk range to only one page, or the frame pointer will let us visit some invalid memery parts when backtracing. Due to the `fp` and `sp` should be in the same page, we can easily restrict the `fp` range to `PGROUNDDOWN(sp) < fp && fp < PGROUNDUP(sp)` to guarantee the validancy of `fp`. -->
 
 To retrieve the value of the return address (`ra`) at the current stack frame, we can use the following code: `ra = *(uint64*)(fp - 8);`. To move to the next stack frame, we can update the value of `fp` like this: `fp = *(uint64*)(fp - 16)`.
@@ -323,7 +323,7 @@ backtrace:
 [Ctrl+A] [X]
 ```
 
-To fix these issues, we should follow the instructions provided by 6.S081 to implement our code. These instructions tell us that we should save the appropriate registers to handle the traps correctly. However, the instructions also note that "(Hint: it will be many)", indicating that we may easily miss some necessary registers.
+To fix these issues, we should follow the instructions provided by the course website to implement our code. These instructions tell us that we should save the appropriate registers to handle the traps correctly. However, the instructions also note that "(Hint: it will be many)", indicating that we may easily miss some necessary registers.
 <!-- Next, we should follow the instructions provided by 6.S081 to implement our code. The instructions tell us we should save appropriate registers to handle this. However, it also says "(Hint: it will be many)" indicating that it will be easy to miss some necessary registers. -->
 
 To simplify the process, we can just copy all of the registers from the `trapframe`, and restore them all when we return, like this:
@@ -421,11 +421,13 @@ backtrace:
 [Ctrl+A] [X]
 ```
 
-The instructions provided by 6.S081 tell us about the cause of this failure in `test2`:
+The instructions provided by course website tell us about the cause of this failure in `test2`:
 
 > "Prevent re-entrant calls to the handler----if a handler hasn't returned yet, the kernel shouldn't call it again. test2 tests this."
 
-To fix this issue, we need to mark whether the process is currently handling a timer interrupt. If it is, we should ignore any additional timer interrupts until the current one has returned. Since the instructions do not specify how we should handle the timer when we are in a timer interrupt, we can leave the original implementation unchanged. We can achieve this by adding a field to the `struct proc` to mark the current running state of the process. For example, we can add a `in_a_handler` tag to mark whether the process is currently handling a timer interrupt.
+To fix this issue, we need to mark whether the process is currently handling a timer interrupt. If it is, we should ignore any additional timer interrupts until the current one has returned. Since the instructions do not specify how we should handle the timer when we are in a timer interrupt, we can leave the original implementation unchanged.
+
+We can achieve this by adding a field to the `struct proc` to mark the current running state of the process. For example, we can add a `in_a_handler` tag to mark whether the process is currently handling a timer interrupt.
 
 To modify the `sys_return` syscall to account for this, we can do the following:
 <!-- Don't worry, the instructions given in 6.S081 tell us about the cause that would fail `test2`:
@@ -516,7 +518,7 @@ test1 passed
 test2 start
 ........alarm!
 test2 passed
-$ 
+$
 ```
 
 ## Make grade
@@ -525,6 +527,6 @@ $
 
 ## Reference
 
-1. [MIT 6.S081 2021](https://pdos.csail.mit.edu/6.828/2021/labs/traps.html)
+1. [MIT 6.S081 Lab: Traps](https://pdos.csail.mit.edu/6.828/2021/labs/traps.html)
 2. [Lecture Slides](https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf)
 3. [Question Answers](https://blog.csdn.net/DreamPoem/article/details/121787023)

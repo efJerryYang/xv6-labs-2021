@@ -6,7 +6,9 @@ In this task, our goal is to create a user function that can support multithread
 
 To begin, we should read through the code of several `xv6` functions, as outlined in the `xv6` book. These functions include `yield`, `sleep`, `sched`, `scheduler`, and the assembly code `swtch`. These resources will give us a good understanding of how scheduling works within the C code, which will be helpful as we start implementing this task.
 
-The instructions provided may not be very clear, but the task itself is fairly simple to accomplish by just reading through the `uthread.c` code example. Following the TODOs, our first step will be to complete the definition of `struct thread` using the following code:
+The instructions provided may not be very clear, but the task itself is fairly simple to accomplish by just reading through the `uthread.c` code example.
+
+Following the `TODOs`, our first step will be to complete the definition of `struct thread` using the following code:
 
 <!-- This task is to implement a user function that can support multithreading, just like those programming languages library developers did. It is generally a tougth task to handle the low-level implementation of multithreading, but in this lab, the task for us is really simple.
 
@@ -58,7 +60,7 @@ The tasks at hand are not labs for the xv6 operating system, but rather programs
 
 Our goal is to improve the performance of filling and updating the hash table using multithreading in C. The original code works correctly when run with one thread, but there are issues when using multiple threads. Our task is to resolve these issues and optimize the process using multithreading techniques.
 
-<!-- 
+<!--
 This task and the next one are not labs working on xv6 operating system but directly runs on the host machine.
 
 The goal is to speed up the procedure of filling and updating the hash table using multithreading technique in C. The original code example can correctly run in 1 thread, but will cause problems when running with multiple thread. -->
@@ -74,7 +76,7 @@ If multiple threads execute the program, race conditions may occur due to the la
 For example, consider a scenario where `thread 0` and `thread 1` both try to add a key-value pair to `bucket 0`. It may be difficult to determine what happened during the insert process, which could potentially result in many entries being lost from the linked entry list.
 
 For instance, suppose the hash table initially has the following structure:
-<!-- 
+<!--
 If there are multiple threads executing the program, race conditions may occur.
 
 That's because there is no locks for the hash table to be held when threads are visiting at the same time.
@@ -93,7 +95,7 @@ index  pointers   entries
 ```
 
 Now, let's say that `thread 0` tries to insert a key-value pair `(k3, v3)` into `bucket 0`, while `thread 1` also wants to insert a key-value pair `(k4, v4)` into the same bucket. If `thread 0` enters the insert function first and executes up to the line `e->next = n;` before the entry pointer is updated to link to the newly inserted entry struct, then `thread 0` may switch to `thread 1`, which also enters the insert function and successfully updates the entry pointer to point to the entry with key pair `(k4, v4)`.
-<!-- 
+<!--
 Now, t0 try to insert a key-value pair (k3, v3) into bucket 0, while t1 also want to insert a key-value pair (k4, v4) into bucket 0. Assuming that t0 first enter the `insert` function, executing to the line `e->next = n;` just before the entry pointer being updated to link to the newly inserted entry struct. Then t0 swtich to t1, also executing into the `insert` function, but successfully updated the entry pointer to point to the entry with key pair (k4, v4). -->
 
 As a result, the structure of the first bucket would look like this:
@@ -109,7 +111,7 @@ As a result, the structure of the first bucket would look like this:
 
 When the switch back to `thread 0` and it continues executing the code `*p = e`, it could cause the entry `[(k4, v4), ----]---->` to be lost. This is the cause of missing keys in this program.
 
-To solve this issue, we can add a lock to each bucket to prevent race conditions. This way, multiple threads can work concurrently on different buckets without causing missing entries. Different approaches can be taken to implement this solution, but the provided lock and unlock statements make it easy to implement this solution.
+To solve this issue, we can add a lock to each bucket to prevent race conditions. This way, multiple threads can work concurrently on different buckets without causing missing entries. Different approaches can be taken to implement this solution, but the provided lock and unlock statements make it easy to implement this task.
 <!-- Solutions to it can vary according to different scheme applied to this situation, but according to the given lock and unlock statements, we can easily add a lock to each bucket to avoid such race conditions. In this way, multiple thread can work concurrently on multiple bucket while not casusing the issuse of missing entries. -->
 
 ### Implementation

@@ -2,7 +2,7 @@
 
 ## Implement copy-on write (hard)
 
-The general idea is to mark all pagetables as not writable and with bits for recognizing copy-on-write (COW) set to 1. Whenever a page fault occurs, the trap handling function should be able to identify this cause and update the pagetable.
+The general idea is to mark all pagetables as not writable and with bits for recognizing copy-on-write (COW) set to 1. Whenever a page fault occurs, the trap handling function should be able to identify the cause and update the pagetable.
 
 This allows the copy process of fork to happen only when the process needs to write corresponding memory, which would save a lot of time when forking a very large process.
 
@@ -10,7 +10,7 @@ To implement this functionality, the instructions on the [lab website](https://p
 
 - `uvmcopy`: remove the memory allocation and map the parent to the child
 - `usertrap`: where we handle the page fault, the core part of this task
-- `kallc` and `kfree`: manage the page's reference count
+- `kalloc` and `kfree`: manage the page's reference count
 - `kinit`: initialize the page's reference count
 - `copyout`: reuse the scheme in `usertrap` to handle COW pages
 
@@ -32,7 +32,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
   } // examine the old pagetable
-  for (i = 0; i< 512; i++) {
+  for (i = 0; i < 512; i++) {
     *pte = &old[i];        // get pointer to old page table entry
     *pte = *pte & ~PTE_W;  // clear write bit
     *pte = *pte | PTE_COW; // set COW bit
@@ -202,13 +202,13 @@ trap_err:
 The idea applied here is similar to that used in the `copyout` function, as instructed. We still use the pointer to the `pte` so that we don't need to call the `mappages` function to `walk` through the `va` again.
 <!-- The idea applied here is similar to that in copyout, just as the instructions hinted. We still use the pointer of `pte` so that we do not need to call function `mappages` to `walk` through the `va` again. -->
 
-However, something went wrong in the `usertests` even though the `cowtest` passed. It resulted in a kernel trap when running the `usertests` copyout. I tried several approaches here, including moving the page reference count into the `kfree` function as many bloggers do, and handling the MAXVA problem in the page fault handling section.
+However, something went wrong in the `usertests` even though the `cowtest` passed. It resulted in a kernel trap when running the `usertests` copyout. We tried several approaches here, including moving the page reference count into the `kfree` function as many bloggers do, and handling the `MAXVA` problem in the page fault handling section.
 <!-- However, something crashed in the usertests even when the cowtest pass, and it yield a kernel trap when running the usertests copyout. I tried several attempts here, including move the page reference count into the kfree function as many bloggers do, handle the MAXVA problem in page fault handling section and so on. -->
 
-The updated code is explained below, although it still only passes the `cowtest` and gets stuck even at the first `usertests`, which makes things worse, but I forgot to commit my previous code here, only the commented code line remains.
+The updated code is explained below, although it still only passes the `cowtest` and gets stuck even at the first `usertests`, which makes things worse, but we forgot to commit our previous code here, only the commented code lines remained.
 <!-- The updated code are explained as follows, though can only pass cowtest, and even stuck at the first usertests. -->
 
-First, I rewrote my `uvmcopy` function as many bloggers do - I just removed the allocation part but kept the `mappages` function here. This is because it is okay to use `mappages` here to ensure the correctness of the code before passing the `usertests`. That is, I made as few changes to the original code as possible for now.
+First, we rewrote our `uvmcopy` function as many bloggers do - we just removed the allocation part but kept the `mappages` function here. This is because it is okay to use `mappages` here to ensure the correctness of the code before passing the `usertests`. That is, we made as few changes to the original code as possible for now.
 <!-- First, I rewrite my uvmcopy function as many bloggers do - just remove the allocating part but remain the mappages function here, because it okay to use mappages here to guarantee the correctness of code before passing the usertests. That is, make as least changes to the original code as possible now. -->
 
 ```c
@@ -273,7 +273,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 }
 ```
 
-Now, start modifying the kalloc.c functions. First is absolutely the kfree function where we should handling the reference count, the logic will not change compared to the code implementation in usertrap.
+Now, start modifying the `kalloc.c` functions. First is absolutely the `kfree` function where we should handling the reference count, the logic will not change compared to the code implementation in `usertrap`.
 
 ```c
 void
@@ -316,7 +316,13 @@ freerange(void *pa_start, void *pa_end)
 Finally, we modified the code in `usertrap` (after updating the `copyout` function). We manually managed the `page_reference_count` array in a similar way as we did in `copyout`.
 <!-- Finally, modify the code in usertrap (we have updated function copyout), where we manually manage the page_reference_count array. The modification is similar to that in copyout, so I omit the step here. -->
 
-However, the program still failed on the first `usertest`, which is unacceptable for us. After looking into the issue, we found that the program was stuck at `*(char*)a = 99;` in the child process during the `MAXVAplus` test. The for loop was still on the first round, and it was easy to see that the address `a` was out of range because it was initially set to `MAXVA`. This issue should have been handled in `usertrap` when the virtual address was invalid. We found that the line `if(va >= MAXVA || (va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp)-PGSIZE))` was causing an infinite loop by directly going to the `trap_err` label without updating the `killed` field of the process to `1`.
+However, the program still failed on the first `usertest`, which is unacceptable for us. After looking into the issue, we found that the program was stuck at `*(char*)a = 99;` in the child process during the `MAXVAplus` test. The for loop was still on the first round, and it was easy to see that the address `a` was out of range because it was initially set to `MAXVA`. This issue should have been handled in `usertrap` when the virtual address was invalid. We found that the line here:
+
+```c
+if(va >= MAXVA || (va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp)-PGSIZE))
+```
+
+was causing an infinite loop by directly going to the `trap_err` label without updating the `killed` field of the process to `1`.
 <!-- And currently, the program still fails on the even first usertests, which is still untoleratble, so I look through it when I was just writing the report.
 
 The first test is MAXVAplus, and after severl attemps and printf to print out the running thread, the program stuck at `*(char*)a = 99;` in the child process, and the for loop is still on the first round. It is easy to understand that the address a is out of range because it was initially set to MAXVA, and should be handled in usertrap where the va is invalid. And I finally come to this line `if(va >= MAXVA || (va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp)-PGSIZE))`, which directly goto trap_err tag without updating the process field killed to 1, thus caused an infinitely loop here. -->
@@ -324,7 +330,7 @@ The first test is MAXVAplus, and after severl attemps and printf to print out th
 When we fixed this bug, the `usertests` were able to run until the `copyout` function, but we still encountered a kernel trap. Unfortunately, due to time constraints, we were not able to fully resolve this issue before writing reports of other labs.
 <!-- When I fix this bug, the usertests can run to copyout, but things still not work correctly here and yield a kernel trap. Due to the limited time now, I have to write reports for other labs, so this is just the result I have till now. -->
 
-After further investigation, we have determined that there are only two failed user tests: `copyout` and `pgbad`. These failures appear to be related to the pagetable. It is likely that there is an issue with writing to the pagetable. We should focus our efforts on investigating this issue further.
+After further investigation, we have determined that there are only two failed `usertests`: `copyout` and `pgbug`. These failures appear to be related to the pagetable. It is likely that there is an issue with writing to the pagetable. We should focus our efforts on investigating this issue further.
 
 We have updated the code in the `copyout` and `usertrap` functions to include a separate function called `handle_cow_fault`, which is responsible for handling copy-on-write faults. This improves the readability of the code compared to our previous version. The updated code should look like this:
 <!-- According to a deeper investigation on the issue, we can finally determine that there are only 2 of the usertests failed, including `copyout` and `pgbug`, both of which seemed related to the pagetable. So, we can generally conclude that there must be something go wrong when writing the the pagetable, further checks should be focused on this.

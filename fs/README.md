@@ -5,7 +5,7 @@
 To handle large files in an operating system with an ext2-like filesystem, it is necessary to analyze the code example provided for handling inode layout, which stores pointers to the data blocks.
 <!-- To handle the large files in an operating system with ext2-like filesystem, it is straightforward to start analyzing the code example given for handling inode layout, where store the pointers to the datablocks. -->
 
-The given filesystem inode in this case should have the following layout: (the layout was generated using `copilot`, so there is no script available for creating it)
+The given filesystem inode in this case should have the following layout (the layout was generated with the help of `Copilot`, so there is no script available for creating it):
 <!-- In this case the given filesystem inode should look like the following: (the layout is generated with the help of copilot, so there is no script for creating it) -->
 
 ```txt
@@ -57,7 +57,7 @@ The given filesystem inode in this case should have the following layout: (the l
 
 To implement the doubly-indirect block, we can follow the structure of the singly-indirect block and modify the `bmap` function as follows:
 
-1. First, check if the given block number (`bn`) is within the range of the direct blocks (`0` to `NDIRECT-1`). If it is, return the block number as is.
+1. First, check if the given block number (`bn`) is within the range of the direct blocks (`0` to `NDIRECT-1`). If it is, return the block number as it is.
 2. If the block number is within the range of the singly-indirect blocks (`NDIRECT` to `NDIRECT + NINDIRECT - 1`), compute the group index and in-group index as described above. Then, use these indices to access the corresponding block in the singly-indirect block.
 3. If the block number is within the range of the doubly-indirect blocks (`NDIRECT + NINDIRECT` to `NDIRECT + NINDIRECT + NINDIRECT^2 - 1`), repeat the process used in step 2, but this time accessing the block in the doubly-indirect block.
 
@@ -104,13 +104,13 @@ Therefore, we can follow the implementation for singly-indirect blocks to accomp
 
 To modify the code that handles discarding the inode in the `itrunc` function, we can follow a similar structure as the original code handling the singly-indirect blocks. Here is the code that should be added:
 
-1. First, we need to handle the doubly-indirect block by looping through the first level index entries. We can do this by adding a `for` loop that iterates from the base index of the `addr` array (which is the index of the doubly-indirect block, DNIRECT + 1) to the end of the array.
+1. First, we need to handle the doubly-indirect block by looping through the first level index entries. We can do this by adding a `for` loop that iterates from the base index of the `addr` array (which is the index of the doubly-indirect block, `DNIRECT + 1`) to the end of the array.
 2. Inside the loop, we need to check if the current index entry is non-zero. If it is, we should free the block pointed to by the entry and set the entry to zero.
 3. After the loop, we can proceed with the rest of the `itrunc` function as normal, handling the singly-indirect and direct blocks in the same way as before.
 <!-- Additionally, we need to modify code that discarding the indoe in function `itrunc`. We can insert our code handling the doubly-indirect blocks in a similar with as the original code handling the singly-indirect blocks. The only differences here is the base index for `addr` array should be the index of the doubly-indirect index `DNIRECT + 1`, and there should be a loop to iterate through the first level index entries.
 
 Here is the code we should add: -->
-```c 
+```c
 // in file fs.c, function itrunc
   ...
   // trucate inode, handle the case for direct and singly-indirect index blocks
@@ -158,8 +158,8 @@ The goal of this task is to create a symbolic link that connects the 'filepath' 
 To complete this task, the following steps must be taken:
 
 1. Update the files related to the `sys_symlink` syscall. This can be done by following the instructions on the course website.
-2. Write the `sys_symlink` syscall function, which should be placed in sysfile.c along with the other filesystem-related syscalls.
-3. Update `sys_open` to handle the `sys_symlink` syscall by adding an if statement branch to handle the new file type `T_SYMLINK`. One thing to note is the `O_NOFOLLOW` open mode bit, as it is easy to misunderstand its usage. It simply means not to follow the link to the target file, but to return the link file itself.
+2. Write the `sys_symlink` syscall function, which should be placed in `sysfile.c` along with the other filesystem-related syscalls.
+3. Update `sys_open` to handle the `sys_symlink` syscall by adding an `if` statement branch to handle the new file type `T_SYMLINK`. One thing to note is the `O_NOFOLLOW` open mode bit, as it is easy to misunderstand its usage. It simply means not to follow the link to the target file, but to return the link file itself.
 
 Let's start with the first step: updating the files related to the `sys_symlink` syscall.
 
@@ -193,13 +193,13 @@ Other parts related to adding a syscall, including adding an entry in the perl s
 entry("symlink");
 ```
 
-```c 
+```c
 // syscall.h
 ...
 #define SYS_symlink 22
 ```
 
-```c 
+```c
 // syscall.c
 ...
 
@@ -212,7 +212,7 @@ static uint64 (*syscalls[])(void) = {
 
 ...
 ```
-<!-- 
+<!--
 Now, we can start implementing the core part of the system call. We place the syscall function `sys_symlink` in file `sysfile.c`, which is a source file for placing filesystem related syscalls, including `create` and `sys_open`.
 
 In the `sys_symlink` function, we should first fetch the arguments from trapframe by using `argstr`. The syscall prototype given by course website is `symlink(char *target, char *path)`, so the arguments in position `0` is the source file to be referred, and the argument in the position `1` is the path of the symbolic link to be created, namely the new file path. Then we should create a new inode with file type `T_SYMLINK` to store the data (the original path for the file), so we write data in the inode using function `writei`. After operating the inode, the `iunlockput` should be called to release lock on the inode. -->
@@ -220,7 +220,7 @@ Now, we can start implementing the core part of the system call. We will place t
 
 In the `sys_symlink` function, we first need to fetch the arguments from the trapframe using `argstr`. The syscall prototype given by the course website is `symlink(char *target, char *path)`, so the argument at position `0` is the source file to be referred to, and the argument at position `1` is the path of the symbolic link to be created, namely the new file path. Then we need to create a new inode with file type `T_SYMLINK` to store the data (the original path for the file). We do this by writing data to the inode using the `writei` function. After operating on the inode, we should call `iunlockput` to release the lock on the inode.
 
-```c 
+```c
 uint64
 sys_symlink(void)
 {
@@ -251,16 +251,16 @@ sys_symlink(void)
 }
 ```
 
-<!-- However, the variable names we used here may make some confusions, that the `name` string represents the `target` in system call prototype, while the `target` string represents the `path` in system call prototype. 
+<!-- However, the variable names we used here may make some confusions, that the `name` string represents the `target` in system call prototype, while the `target` string represents the `path` in system call prototype.
 
 One more thing to be mentioned here is an argument for function `writei`. It is not very clear at first whether the `user_src` argument should be 0 (run in kernel), or 1 (run in user space), but we can guess that the syscall is working in kernal space so the writei should also work in kernel space. -->
-However, the variable names we used here may cause some confusion, as the `name` string represents the `target` in the system call prototype, while the `target` string represents the `path` in the system call prototype. 
+However, the variable names we used here may cause some confusion, as the `name` string represents the `target` in the system call prototype, while the `target` string represents the `path` in the system call prototype.
 
-One more thing to mention is an argument for the `writei` function. It is not immediately clear whether the `user_src` argument should be 0 (run in kernel) or 1 (run in user space). However, we can assume that the syscall is running in kernel space, so `writei` should also run in kernel space.
+One more thing to mention is an argument for the `writei` function. It is not immediately clear whether the `user_src` argument should be 0 (run in kernel) or 1 (run in user space). However, we can know that the syscall is running in kernel space, so `writei` should also run in kernel space.
 
 Next, we need to handle the case of opening a symbolic link file, which involves modifying the code in the `sys_open` file. It is easy to add a branch to handle `T_SYMLINK` just below the branch that handles `T_DIR`:
 
-```c 
+```c
 // function sys_open
 ...
   if(omode & O_CREATE){
@@ -288,7 +288,7 @@ Next, we need to handle the case of opening a symbolic link file, which involves
 Before implementing this, we should consider the hints given by the course website:
 
 > "Modify the `open` system call to handle the case where the path refers to a symbolic link. If the file does not exist, `open` must fail. When a process specifies `O_NOFOLLOW` in the flags to open, open should open the symlink (and not follow the symbolic link).
-> 
+>
 > If the linked file is also a symbolic link, you must recursively follow it until a non-link file is reached. If the links form a cycle, you must return an error code. You may approximate this by returning an error code if the depth of links reaches some threshold (e.g., 10)."
 
 Therefore, we need to consider the following cases:
@@ -303,7 +303,7 @@ So, we handle this by using a loop, but when writing this part, it is straightfo
 
 It is not immediately clear how to handle the recursive visiting of the symbolic link. Rewriting the `sys_open` function as a recursive function using an argument fetch function may not be the most convenient solution. Writing a separate function to handle this may also not be the best approach.
 
-Therefore, we decided to use a loop instead. To handle the case of recursive visiting, it is straightforward to write an if statement that checks the depth count and, if necessary, jumps back to the beginning of the loop using a `goto` statement. This can also be easily optimized into a for loop.
+Therefore, we decided to use a loop instead. To handle the case of recursive visiting, it is straightforward to write an `if` statement that checks the depth count and, if necessary, jumps back to the beginning of the loop using a `goto` statement. This can also be easily optimized to a `for` loop.
 
 ```c
 // sys_open
@@ -341,8 +341,10 @@ Therefore, we decided to use a loop instead. To handle the case of recursive vis
 
 Now, we should be able to pass all tests when running `make grade` in the `fs` branch.
 
-
 ## Make grade
 
+![grade](./resources/fs-make-grade.png)
 
-![](./resources/fs-make-grade.png)
+## Reference
+
+1. [MIT 6.S081 Lab: File System](https://pdos.csail.mit.edu/6.828/2021/labs/fs.html)
